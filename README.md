@@ -26,9 +26,16 @@ Auteur: Alexandre CAROL
    - Copiez le fichier `app/.env.example` vers `app/.env`
    - Modifiez les valeurs dans `app/.env`
 
-3. Lancez le projet :
+3. Installer les dépendances :
    ```bash
-   docker-compose up
+   cd app/
+   npm i
+   ```
+
+4. Lancez le projet :
+   ```bash
+   cd ..
+   docker compose up
    ```
 
 4. Accédez à `http://localhost:3000` ou `http://localhost:3000/front/index.html`
