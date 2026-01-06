@@ -1,5 +1,7 @@
 # Chat WebSocket
 
+Auteur: Alexandre CAROL
+
 ## Fonctionnalités
 
 - **Authentification JWT** : Connexion avec des utilisateurs prédéfinis (admin/user)
