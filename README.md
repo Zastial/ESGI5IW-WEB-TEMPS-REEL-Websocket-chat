@@ -16,8 +16,8 @@
 
 1. Clonez le repository :
    ```bash
-   git clone <url-du-repo>
-   cd chat-websocket
+   git clone https://github.com/Zastial/ESGI5IW-WEB-TEMPS-REEL-Websocket-chat.git
+   cd ESGI5IW-WEB-TEMPS-REEL-Websocket-chat
    ```
 
 2. Configurez les variables d'environnement :
