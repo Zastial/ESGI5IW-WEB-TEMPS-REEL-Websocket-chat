@@ -97,6 +97,7 @@ export class MessageGateway {
     this.userRoles.delete(client.id);
     this.usernames.delete(client.id);
     this.userTokens.delete(client.id);
+    client.disconnect();
   }
 
   private getVisibleRooms(userRole: string): Room[] {
