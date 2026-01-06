@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login / Signup</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="theme.js" defer></script>
+    <style>
+      main {
+        max-width: 400px;
+        margin: 60px auto;
+      }
+
+      .form-container {
+        background: var(--card-bg);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 30px;
+      }
+
+      .form-container h2 {
+        margin-top: 0;
+        color: var(--text);
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--text);
+        font-weight: 500;
+      }
+
+      .form-group input {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--bg);
+        color: var(--text);
+        font-size: 15px;
+        box-sizing: border-box;
+      }
+
+      .form-group input:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+      }
+
+      .form-group button {
+        width: 100%;
+        padding: 10px;
+        background: var(--primary);
+        border: none;
+        border-radius: 6px;
+        color: white;
+        font-size: 15px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+
+      .form-group button:hover {
+        background: var(--primary-hover);
+      }
+
+      .form-group button:disabled {
+        background: var(--border);
+        cursor: not-allowed;
+      }
+
+      .preset-users {
+        background: var(--bg);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 15px;
+        margin-bottom: 20px;
+      }
+
+      .preset-users p {
+        margin: 0 0 12px 0;
+        color: var(--text);
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      .preset-users .user-button {
+        display: inline-block;
+        margin-right: 10px;
+        margin-bottom: 8px;
+        padding: 8px 16px;
+        background: var(--primary);
+        border: none;
+        border-radius: 6px;
+        color: white;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+
+      .preset-users .user-button:hover {
+        background: var(--primary-hover);
+      }
+
+      .error-message {
+        color: #ef4444;
+        font-size: 14px;
+        margin-bottom: 15px;
+        padding: 10px;
+        background: rgba(239, 68, 68, 0.1);
+        border-radius: 4px;
+        display: none;
+      }
+
+      .success-message {
+        color: #10b981;
+        font-size: 14px;
+        margin-bottom: 15px;
+        padding: 10px;
+        background: rgba(16, 185, 129, 0.1);
+        border-radius: 4px;
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <a href="index.html">Chat Websocket</a>
+      <button id="theme-toggle" onclick="toggleTheme()"></button>
+    </nav>
+
+    <main>
+      <div class="form-container">
+        <h2>Login</h2>
+
+        <div id="error-message" class="error-message"></div>
+        <div id="success-message" class="success-message"></div>
+
+        <form id="login-form">
+          <div class="form-group">
+            <label for="username">Pseudo</label>
+            <input id="username" type="text" placeholder="Entrez votre pseudo" required />
+          </div>
+
+          <div class="form-group">
+            <label for="password">Mot de passe</label>
+            <input id="password" type="password" placeholder="Entrez votre mot de passe" required />
+          </div>
+
+          <div class="form-group">
+            <button type="submit">Se connecter</button>
+          </div>
+        </form>
+      </div>
+    </main>
+
+    <script>
+      const form = document.getElementById('login-form');
+      const usernameInput = document.getElementById('username');
+      const passwordInput = document.getElementById('password');
+      const errorMessage = document.getElementById('error-message');
+      const successMessage = document.getElementById('success-message');
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = usernameInput.value.trim();
+        const password = passwordInput.value.trim();
+
+        errorMessage.style.display = 'none';
+        successMessage.style.display = 'none';
+
+        try {
+          const response = await fetch('http://localhost:3000/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+          });
+
+          const data = await response.json();
+
+          if (response.ok && data.token) {
+            sessionStorage.setItem('token', data.token);
+            sessionStorage.setItem('username', username);
+            successMessage.textContent = `Bienvenue ${username}!`;
+            successMessage.style.display = 'block';
+            
+            setTimeout(() => {
+              globalThis.location.href = 'index.html';
+            }, 500);
+          } else {
+            errorMessage.textContent = data.message || 'Identifiants invalides.';
+            errorMessage.style.display = 'block';
+            passwordInput.value = '';
+          }
+        } catch (error) {
+          errorMessage.textContent = 'Erreur de connexion au serveur.';
+          errorMessage.style.display = 'block';
+          console.error('Erreur:', error);
+        }
+      });
+
+      globalThis.addEventListener('DOMContentLoaded', () => {
+        const storedToken = sessionStorage.getItem('token');
+        if (storedToken) {
+          globalThis.location.href = 'index.html';
+        }
+      });
+    </script>
+  </body>
+</html>

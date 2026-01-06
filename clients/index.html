@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="theme.js" defer></script>
+    <style>
+      nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      nav > div {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+
+      main .chat {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 20px;
+        height: 450px;
+      }
+
+      main .chat-section {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+
+      main .rooms-section {
+        width: 250px;
+        display: flex;
+        flex-direction: column;
+      }
+      
+      #messages {
+        list-style-type: none;
+        margin: 0;
+        padding: 0;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--card-bg);
+        height: 400px;
+        overflow-y: auto;
+        flex: 1;
+      }
+
+      #messages > li {
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border);
+        color: var(--text);
+        word-wrap: break-word;
+        white-space: pre-wrap;
+      }
+
+      #messages > li:last-child {
+        border-bottom: none;
+      }
+
+      #messages > li:nth-child(odd) {
+        background: var(--bg);
+      }
+
+      #typingIndicator {
+        font-style: italic;
+        color: var(--text-secondary);
+        padding: 8px 16px;
+        font-size: 14px;
+      }
+
+      .rooms {
+        list-style-type: none;
+        margin: 0;
+        padding: 0;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--card-bg);
+        height: 400px;
+        overflow-y: auto;
+      }
+
+      .rooms > li {
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border);
+        color: var(--text);
+        cursor: pointer;
+        transition: background 0.1s;
+      }
+
+      .rooms > li:hover {
+        background: var(--border);
+      }
+
+      .rooms > li.active {
+        background: var(--primary);
+        color: white;
+      }
+
+      .rooms > li:last-child {
+        border-bottom: none;
+      }
+
+      .room-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .room-name {
+        flex: 1;
+        cursor: pointer;
+      }
+
+      .room-delete {
+        background: #ef4444;
+        border: none;
+        padding: 4px 8px;
+        border-radius: 4px;
+        color: white;
+        font-size: 12px;
+        cursor: pointer;
+        transition: background 0.15s;
+        display: none;
+      }
+
+      .room-delete:hover {
+        background: #dc2626;
+      }
+
+      .rooms > li.admin-controls .room-delete {
+        display: block;
+      }
+
+      #form {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+      }
+
+      #input {
+        flex-grow: 1;
+        padding: 10px 14px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--card-bg);
+        color: var(--text);
+        font-size: 15px;
+      }
+
+      #input:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+      }
+
+      #form > button {
+        background: var(--primary);
+        border: none;
+        padding: 10px 20px;
+        border-radius: 6px;
+        color   : white;
+        cursor: pointer;
+        font-size: 15px;
+        font-weight: 500;
+        transition: background 0.15s;
+      }
+
+      #form > button:hover {
+        background: var(--primary-hover);
+      }
+
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.4);
+      }
+
+      .modal-content {
+        background-color: var(--card-bg);
+        margin: 15% auto;
+        padding: 20px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        width: 80%;
+        max-width: 400px;
+        color: var(--text);
+      }
+
+      .modal-content h2 {
+        margin-top: 0;
+      }
+
+      .modal-content form {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .modal-content label {
+        font-weight: bold;
+      }
+
+      .modal-content input {
+        padding: 8px;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      .modal-content button {
+        padding: 10px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: 500;
+      }
+
+      .modal-content button[type="submit"] {
+        background: var(--primary);
+        color: white;
+      }
+
+      .modal-content button[type="button"] {
+        background: var(--border);
+        color: var(--text);
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <a href="index.html">Chat Websocket</a>
+      <div>
+        <a id="loginButton" href="/front/login.html">Login</a>
+        <p>Bienvenue <span id="usernameDisplay"></span></p>
+        <button id="changeUsernameButton" style="display: none;" onclick="changeUsername()">Changer pseudo</button>
+        <button id="disconnectButton" style="display: none;" onclick="disconnect()">Déconnexion</button>
+        <button id="theme-toggle" onclick="toggleTheme()"></button>
+      </div>
+    </nav>
+
+    <main>
+      <div class="chat">
+        <div class="chat-section">
+          <h1>Chat actuel: <span id="chatName">Lobby</span></h1>
+          <ul id="messages"></ul>
+          <div id="typingIndicator"></div>
+        </div>
+        <div class="rooms-section">
+          <h3>Rooms disponibles</h3>
+          <button id="createRoomButton" onclick="createRoom()">Créer une room</button>
+          <ul id="rooms" class="rooms"></ul>
+        </div>
+      </div>
+
+      <form id="form" action="">
+        <input id="input" placeholder="Entrez un message..." />
+        <button type="submit">Envoyer</button>
+      </form>
+    </main>
+
+    <div id="createRoomModal" class="modal">
+      <div class="modal-content">
+        <h2>Créer une room</h2>
+        <form id="createRoomForm">
+          <label for="roomNameInput">Nom de la room (max 30 caractères):</label>
+          <input type="text" id="roomNameInput" maxlength="30" required>
+
+          <div class="radio">
+            <label for="roomNameInput">Type de room</label>
+            <input type="radio" id="publicRoom" name="roomType" value="public" checked>
+            <label for="publicRoom">Publique</label>
+            <input type="radio" id="privateRoom" name="roomType" value="private">
+            <label for="privateRoom">Privée</label>
+          </div>
+
+          <label for="roomNameInput">Cooldown ?</label>
+          <input type="number" id="cooldownInput" value="0">
+
+          <button type="submit">Créer</button>
+          <button type="button" onclick="closeModal()">Annuler</button>
+        </form>
+      </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script lang="ts">
+      class Room {
+        constructor(name, members = new Set(), isAdmin = false, cooldown = 0) {
+          this.name = name;
+          this.members = members;
+          this.isAdmin = isAdmin;
+          this.cooldown = cooldown;
+        }
+      }
+
+      function decodeJWT(token) {
+        try {
+          const parts = token.split('.');
+          if (parts.length !== 3) return null;
+          const payload = JSON.parse(atob(parts[1]));
+          return payload;
+        } catch {
+          return null;
+        }
+      }
+
+      globalThis.addEventListener('DOMContentLoaded', () => {
+        const storedUsername = sessionStorage.getItem('username');
+        if (storedUsername) {
+          const disconnectButton = document.getElementById('disconnectButton');
+          const changeUsernameButton = document.getElementById('changeUsernameButton');
+          const loginButton = document.getElementById('loginButton');
+          loginButton.style.display = 'none';
+          disconnectButton.style.display = 'inline-block';
+          changeUsernameButton.style.display = 'inline-block';
+          document.getElementById('usernameDisplay').textContent = storedUsername;
+        } else {
+          globalThis.location = 'login.html';
+        }
+      });
+
+      function changeUsername() {
+        const newUsername = prompt('Entrez votre nouveau pseudo:');
+        if (newUsername && newUsername.trim()) {
+          const trimmedUsername = newUsername.trim();
+          sessionStorage.setItem('username', trimmedUsername);
+          document.getElementById('usernameDisplay').textContent = trimmedUsername;
+          socket.emit('updateUsername', trimmedUsername);
+        }
+      }
+
+      function disconnect() {
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('username');
+        globalThis.location = 'login.html';
+      };
+
+      function createRoom() {
+        document.getElementById('createRoomModal').style.display = 'block';
+      }
+
+      function closeModal() {
+        document.getElementById('createRoomModal').style.display = 'none';
+        document.getElementById('createRoomForm').reset();
+      }
+
+      const token = sessionStorage.getItem('token');
+      const tokenPayload = decodeJWT(token);
+      const userRole = tokenPayload?.role || 'USER';
+      
+      const createRoomButton = document.getElementById('createRoomButton');
+      if (userRole !== 'ADMIN') {
+        createRoomButton.style.display = 'none';
+      }
+      
+      const socket = io({
+        query: {
+          token: token,
+        }
+      });
+
+      const createRoomForm = document.getElementById('createRoomForm');
+      createRoomForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const roomName = document.getElementById('roomNameInput').value.trim();
+        const type = document.querySelector('input[name="roomType"]:checked').value;
+        const cooldown = Number.parseInt(document.getElementById('cooldownInput').value, 10) || 0;
+        if (roomName && roomName.length <= 30 && (type === 'public' || type === 'private') && cooldown >= 0) {
+          socket.emit('createRoom', { roomName, type, cooldown });
+          closeModal();
+        }
+      });
+
+      const form = document.getElementById('form');
+      const inputElement = document.getElementById('input');
+      const messages = document.getElementById('messages');
+      const roomsList = document.getElementById('rooms');
+      const sendButton = form.querySelector('button[type="submit"]');
+      
+      let currentRoom = new Room('Lobby', new Set(), false, 0);
+
+      function renderRooms(rooms) {
+        roomsList.innerHTML = '';
+        rooms.forEach((room) => {
+          const roomName = room.name;
+          const roomCooldown = room.cooldown || 0;
+
+          const li = document.createElement('li');
+          li.className = `${roomName === currentRoom.name ? 'active' : ''} ${userRole === 'ADMIN' ? 'admin-controls' : ''}`;
+          
+          const roomDiv = document.createElement('div');
+          roomDiv.className = 'room-item';
+          
+          const nameSpan = document.createElement('span');
+          nameSpan.className = 'room-name';
+          nameSpan.textContent = roomName.length > 30 ? roomName.substring(0, 27) + '...' : roomName;
+          nameSpan.title = roomName;
+          nameSpan.onclick = (e) => {
+            e.stopPropagation();
+            if (room.name === currentRoom.name) return;
+            socket.emit('leaveRoom', currentRoom.name);
+            socket.emit('joinRoom', room.name);
+            currentRoom = room;
+            document.getElementById('chatName').textContent = room.name;
+            messages.innerHTML = '';
+            document.querySelectorAll('#rooms li').forEach((el) => {
+              el.classList.remove('active');
+            });
+            li.classList.add('active');
+
+            if (roomCooldown > 0) {
+              inputElement.placeholder = `Cooldown de ${roomCooldown} secondes activé après chaque message.`;
+            } else {
+              inputElement.placeholder = 'Entrez un message...';
+            }
+          };
+
+          if (userRole === 'ADMIN') {
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'room-delete';
+            deleteBtn.textContent = '✕';
+            deleteBtn.onclick = (e) => {
+              e.stopPropagation();
+              if (confirm(`Supprimer la room "${room.name}" ?`)) {
+                socket.emit('deleteRoom', room.name);
+              }
+            };
+            roomDiv.appendChild(nameSpan);
+            roomDiv.appendChild(deleteBtn);
+          } else {
+            roomDiv.appendChild(nameSpan);
+          }
+          
+          li.appendChild(roomDiv);
+          roomsList.appendChild(li);
+        });
+      }
+
+      inputElement.addEventListener('keyup', (e) => {
+        if (document.activeElement === inputElement && e.key.length === 1) {
+          socket.emit('isWriting', currentRoom.name);
+        }
+      });
+
+      socket.on('roomList', (rooms) => {
+        rooms = rooms.map(r => new Room(r.name, new Set(), r.isAdmin, r.cooldown));
+        renderRooms(rooms);
+      });
+
+      socket.on('updateRoomList', (rooms) => {
+        rooms = rooms.map(r => new Room(r.name, new Set(), r.isAdmin, r.cooldown));
+        renderRooms(rooms);
+      });
+
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const inputValue = inputElement.value.trim();
+        
+        if (inputValue) {
+          socket.emit('message', {
+            room: currentRoom.name,
+            message: inputValue
+          });
+          inputElement.value = '';
+        }
+
+        if (currentRoom.cooldown && currentRoom.cooldown > 0) {
+          inputElement.disabled = true;
+          inputElement.placeholder = `Cooldown activé. Veuillez patienter ${currentRoom.cooldown} secondes...`;
+          sendButton.disabled = true;
+          setTimeout(() => {
+            inputElement.disabled = false;
+            inputElement.placeholder = 'Entrez un message...';
+            sendButton.disabled = false;
+            inputElement.focus();
+          }, currentRoom.cooldown * 1000);
+        }
+      });
+
+      socket.on('roomJoined', (room) => {
+        console.log(`Rejoint la room: ${room}`);
+      });
+
+      socket.on('roomCreated', (room) => {
+        socket.emit('leaveRoom', currentRoom.name);
+        socket.emit('joinRoom', room.name);
+        currentRoom = new Room(room.name, new Set(), room.isAdmin, room.cooldown);
+        document.getElementById('chatName').textContent = room.name;
+        messages.innerHTML = '';
+      });
+
+      socket.on('roomDeleted', (room) => {
+        console.log(`Room supprimée: ${room}`);
+        if (currentRoom.name === room) {
+          currentRoom = new Room('Lobby', new Set(), false, 0);
+          socket.emit('leaveRoom', room);
+          socket.emit('joinRoom', 'Lobby');
+          document.getElementById('chatName').textContent = 'Lobby';
+          messages.innerHTML = '';
+        }
+      });
+
+      socket.on('userJoined', (data) => {
+        console.log(`${data.username} a rejoint ${data.room}`);
+      });
+
+      socket.on('userLeft', (data) => {
+        console.log(`${data.username} a quitté ${data.room}`);
+      });
+
+      socket.on('message', (msg) => {
+        const item = document.createElement('li');
+        item.textContent = msg;
+        messages.appendChild(item);
+        messages.scrollTop = messages.scrollHeight;
+      });
+
+      socket.on('error', (error) => {
+        console.error('Erreur:', error.message);
+        alert(`Erreur: ${error.message}`);
+
+        if (error.message == 'Invalid token') {
+          disconnect();
+        }
+      });
+
+      socket.on('isWriting', (message) => {
+        const typingIndicator = document.getElementById('typingIndicator');
+        typingIndicator.textContent = message;
+        setTimeout(() => {
+          typingIndicator.textContent = '';
+        }, 5000);
+      });
+    </script>
+  </body>
+</html>
